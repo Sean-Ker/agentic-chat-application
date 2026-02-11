@@ -39,6 +39,10 @@ export const env = {
 
   // Database config (required)
   DATABASE_URL: getRequiredEnv("DATABASE_URL"),
+
+  // OpenRouter config (LLM)
+  OPENROUTER_API_KEY: getRequiredEnv("OPENROUTER_API_KEY"),
+  OPENROUTER_MODEL: getOptionalEnv("OPENROUTER_MODEL", "anthropic/claude-haiku-4.5"),
 } as const;
 
 export type Env = typeof env;

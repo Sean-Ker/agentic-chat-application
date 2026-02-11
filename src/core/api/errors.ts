@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod/v4";
 
 import { getLogger } from "@/core/logging";
-import { ProjectError } from "@/features/projects";
 import { createErrorResponse, type ErrorResponse } from "@/shared/schemas/errors";
 
 const logger = getLogger("api.errors");
@@ -10,7 +9,7 @@ const logger = getLogger("api.errors");
 /**
  * Valid HTTP status codes for API errors.
  */
-export type HttpStatusCode = 400 | 401 | 403 | 404 | 409 | 500;
+export type HttpStatusCode = 400 | 401 | 403 | 404 | 409 | 500 | 502;
 
 /**
  * Shape of errors that carry HTTP semantics.
@@ -22,7 +21,7 @@ interface HttpError {
   statusCode: HttpStatusCode;
 }
 
-const VALID_STATUS_CODES = new Set<HttpStatusCode>([400, 401, 403, 404, 409, 500]);
+const VALID_STATUS_CODES = new Set<HttpStatusCode>([400, 401, 403, 404, 409, 500, 502]);
 
 /**
  * Check if an error has HTTP error properties.
@@ -70,7 +69,7 @@ export function handleApiError(error: unknown): NextResponse<ErrorResponse> {
     );
   }
 
-  // Handle feature errors (ProjectError, etc.)
+  // Handle feature errors with HTTP semantics
   if (isHttpError(error)) {
     const level = error.statusCode >= 500 ? "error" : "warn";
     logger[level]({ error: error.message, code: error.code }, "api.error");
@@ -95,6 +94,3 @@ export function unauthorizedResponse(): NextResponse<ErrorResponse> {
     status: 401,
   });
 }
-
-// Re-export ProjectError for type checking in other modules
-export { ProjectError };

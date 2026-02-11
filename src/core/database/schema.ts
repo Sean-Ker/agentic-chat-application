@@ -53,3 +53,26 @@ export const projects = pgTable("projects", {
     .references(() => users.id, { onDelete: "cascade" }),
   ...timestamps,
 });
+
+/**
+ * Conversations table - stores chat conversations.
+ * No owner since auth is not required.
+ */
+export const chatConversations = pgTable("chat_conversations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  ...timestamps,
+});
+
+/**
+ * Messages table - stores individual chat messages within conversations.
+ */
+export const chatMessages = pgTable("chat_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  conversationId: uuid("conversation_id")
+    .notNull()
+    .references(() => chatConversations.id, { onDelete: "cascade" }),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  ...timestamps,
+});

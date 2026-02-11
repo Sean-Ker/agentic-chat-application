@@ -86,6 +86,7 @@
         "**/app/**/loading.tsx",
         "**/app/**/error.tsx",
         "**/app/**/not-found.tsx",
+        "**/app/**/global-error.tsx",
         "**/app/**/template.tsx",
         "**/app/**/default.tsx"
       ],
