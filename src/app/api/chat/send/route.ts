@@ -16,11 +16,19 @@ const logger = getLogger("api.chat.send");
 /**
  * POST /api/chat/send
  * Send a message and stream the AI response via SSE.
+ * Supports optional resolvedContent and references for semicolon-commands.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { content, conversationId: existingConversationId } = SendMessageSchema.parse(body);
+
+    // Extract optional command-resolved fields
+    const resolvedContent =
+      typeof body.resolvedContent === "string" ? body.resolvedContent : undefined;
+    const references = Array.isArray(body.references)
+      ? (body.references as Array<{ targetConversationId: string; command: string }>)
+      : [];
 
     // Create conversation if needed
     let conversationId = existingConversationId;
@@ -31,14 +39,33 @@ export async function POST(request: NextRequest) {
       logger.info({ conversationId }, "chat.conversation_created");
     }
 
-    // Save user message
+    // Save original user message to database
     await addMessage(conversationId, "user", content);
 
-    // Get history for context
+    // Create cross-references for any resolved commands
+    if (references.length > 0) {
+      const { createCrossReference } = await import("@/features/commands/repository");
+      for (const ref of references) {
+        await createCrossReference({
+          sourceConversationId: conversationId,
+          targetConversationId: ref.targetConversationId,
+          command: ref.command,
+        });
+      }
+      logger.info(
+        { conversationId, referenceCount: references.length },
+        "chat.cross_references_created",
+      );
+    }
+
+    // Get history for context — use resolved content for LLM if available
     const history = await getMessages(conversationId);
+    const llmHistory = resolvedContent
+      ? history.map((m, i) => (i === history.length - 1 ? { ...m, content: resolvedContent } : m))
+      : history;
 
     // Stream completion
-    const { stream, fullResponse } = await streamChatCompletion(history);
+    const { stream, fullResponse } = await streamChatCompletion(llmHistory);
 
     // Wrap the stream to save assistant message after completion
     const reader = stream.getReader();

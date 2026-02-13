@@ -24,10 +24,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
+import { ReferenceBadge } from "./reference-badge";
+
 interface ConversationItemProps {
   id: string;
   title: string;
   isActive: boolean;
+  referenceCount?: number;
   onSelect: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
@@ -37,6 +40,7 @@ export function ConversationItem({
   id,
   title,
   isActive,
+  referenceCount,
   onSelect,
   onRename,
   onDelete,
@@ -99,6 +103,7 @@ export function ConversationItem({
       <button type="button" className="flex-1 truncate text-left" onClick={() => onSelect(id)}>
         {title}
       </button>
+      <ReferenceBadge conversationId={id} referenceCount={referenceCount ?? 0} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

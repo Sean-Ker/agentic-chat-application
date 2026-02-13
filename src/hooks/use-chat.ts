@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { hasCommands, parseCommands, replaceCommands } from "@/features/commands/parser";
+
 import { useLocalStorage } from "./use-local-storage";
 
 interface ChatMessage {
@@ -62,6 +64,64 @@ async function readSSEStream(
   }
 
   return accumulated;
+}
+
+interface ResolvedCommandResult {
+  resolvedContent: string;
+  references: Array<{ targetConversationId: string; command: string }>;
+}
+
+async function resolveCommandsInContent(
+  content: string,
+  conversationId: string | undefined,
+  signal: AbortSignal,
+): Promise<ResolvedCommandResult | null> {
+  if (!hasCommands(content)) {
+    return null;
+  }
+
+  const parsed = parseCommands(content);
+  const resolveRes = await fetch("/api/chat/commands/resolve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      commands: parsed.map((p) => ({
+        type: p.type,
+        conversationTitle: p.conversationTitle,
+        question: p.question,
+      })),
+      sourceConversationId: conversationId,
+    }),
+    signal,
+  });
+
+  if (!resolveRes.ok) {
+    const errData = (await resolveRes.json()) as { message?: string };
+    throw new Error(errData.message ?? "Failed to resolve commands");
+  }
+
+  const resolveData = (await resolveRes.json()) as {
+    resolved: Array<{
+      type: string;
+      conversationId: string;
+      conversationTitle: string;
+      content: string;
+      messageCount: number;
+    }>;
+  };
+
+  const resolutions = new Map<string, string>();
+  const references: Array<{ targetConversationId: string; command: string }> = [];
+  for (let i = 0; i < resolveData.resolved.length; i++) {
+    const r = resolveData.resolved[i];
+    const p = parsed[i];
+    if (p && r) {
+      resolutions.set(p.raw, r.content);
+      references.push({ targetConversationId: r.conversationId, command: r.type });
+    }
+  }
+
+  return { resolvedContent: replaceCommands(content, resolutions), references };
 }
 
 function makeTempMessage(conversationId: string, role: string, content: string): ChatMessage {
@@ -135,11 +195,31 @@ export function useChat() {
       setMessages((prev) => [...prev, tempUserMessage]);
 
       try {
+        let commandResult: ResolvedCommandResult | null = null;
+        try {
+          commandResult = await resolveCommandsInContent(
+            content,
+            activeConversationId ?? undefined,
+            abortController.signal,
+          );
+        } catch (resolveError) {
+          if (resolveError instanceof DOMException && resolveError.name === "AbortError") {
+            throw resolveError;
+          }
+          toast.error(
+            resolveError instanceof Error ? resolveError.message : "Failed to resolve commands",
+          );
+          setIsStreaming(false);
+          return;
+        }
+
         const res = await fetch("/api/chat/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             content,
+            resolvedContent: commandResult?.resolvedContent,
+            references: commandResult?.references ?? [],
             conversationId: activeConversationId ?? undefined,
           }),
           signal: abortController.signal,

@@ -76,3 +76,18 @@ export const chatMessages = pgTable("chat_messages", {
   content: text("content").notNull(),
   ...timestamps,
 });
+
+/**
+ * Cross-references table - tracks semicolon-command links between conversations.
+ */
+export const chatCrossReferences = pgTable("chat_cross_references", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sourceConversationId: uuid("source_conversation_id")
+    .notNull()
+    .references(() => chatConversations.id, { onDelete: "cascade" }),
+  targetConversationId: uuid("target_conversation_id")
+    .notNull()
+    .references(() => chatConversations.id, { onDelete: "cascade" }),
+  command: text("command").notNull(),
+  ...timestamps,
+});
