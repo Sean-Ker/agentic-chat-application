@@ -239,9 +239,21 @@ export function useChat() {
         if (!activeConversationId && conversationId) {
           skipNextFetchRef.current = true;
           setActiveConversationId(conversationId);
-          const titleSource = stripCommands(content) || content.trim();
-          const title =
-            titleSource.length > 50 ? `${titleSource.substring(0, 50)}...` : titleSource;
+          const stripped = stripCommands(content);
+          let title: string;
+          if (stripped.length > 0) {
+            title = stripped.length > 50 ? `${stripped.substring(0, 50)}...` : stripped;
+          } else {
+            const cmds = parseCommands(content);
+            const first = cmds[0];
+            if (first) {
+              const ref = first.conversationTitle.replace(/-/g, " ");
+              const desc = `${first.type} — ${ref}`;
+              title = desc.length > 50 ? `${desc.substring(0, 50)}...` : desc;
+            } else {
+              title = content.length > 50 ? `${content.substring(0, 50)}...` : content;
+            }
+          }
           addItem({ id: conversationId, title, updatedAt: new Date().toISOString() });
           setMessages((prev) =>
             prev.map((m) => (m.id === tempUserMessage.id ? { ...m, conversationId } : m)),

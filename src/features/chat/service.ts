@@ -1,5 +1,5 @@
 import { getLogger } from "@/core/logging";
-import { stripCommands } from "@/features/commands/parser";
+import { parseCommands, stripCommands } from "@/features/commands/parser";
 
 import { ConversationNotFoundError } from "./errors";
 import type { Conversation, Message } from "./models";
@@ -81,9 +81,21 @@ export async function addMessage(
 
 export function generateTitleFromMessage(content: string): string {
   const stripped = stripCommands(content);
-  const titleSource = stripped.length > 0 ? stripped : content.trim();
-  if (titleSource.length <= 50) {
-    return titleSource;
+  if (stripped.length > 0) {
+    return stripped.length <= 50 ? stripped : `${stripped.substring(0, 50)}...`;
   }
-  return `${titleSource.substring(0, 50)}...`;
+
+  // Pure-command message — generate a descriptive title from the commands
+  const commands = parseCommands(content);
+  if (commands.length > 0) {
+    const first = commands[0];
+    if (first) {
+      const ref = first.conversationTitle.replace(/-/g, " ");
+      const title = `${first.type} — ${ref}`;
+      return title.length <= 50 ? title : `${title.substring(0, 50)}...`;
+    }
+  }
+
+  const trimmed = content.trim();
+  return trimmed.length <= 50 ? trimmed : `${trimmed.substring(0, 50)}...`;
 }
