@@ -8,22 +8,21 @@ import { getLogger } from "@/core/logging";
 const logger = getLogger("api.chat.conversations.search");
 
 export async function GET(request: NextRequest) {
-  const q = request.nextUrl.searchParams.get("q");
-  if (!q || q.length === 0) {
-    return Response.json({ conversations: [] });
-  }
+  const q = request.nextUrl.searchParams.get("q") ?? "";
 
   logger.info({ query: q }, "conversations.search_started");
 
-  const results = await db
+  const query = db
     .select({
       id: chatConversations.id,
       title: chatConversations.title,
       updatedAt: chatConversations.updatedAt,
     })
-    .from(chatConversations)
-    .where(sql`lower(${chatConversations.title}) like lower(${`${q}%`})`)
-    .limit(10);
+    .from(chatConversations);
+
+  const results = q.length > 0
+    ? await query.where(sql`lower(${chatConversations.title}) like lower(${`%${q}%`})`).limit(10)
+    : await query.limit(20);
 
   const conversations = results.map((r) => ({
     id: r.id,

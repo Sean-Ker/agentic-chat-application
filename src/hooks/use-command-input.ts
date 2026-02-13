@@ -144,8 +144,21 @@ export function useCommandInput(): UseCommandInputReturn {
 
       const fragment = textUpToCursor.slice(lastSemicolon + 1);
 
+      // If fragment contains @, switch to conversation picker mode
+      if (fragment.includes("@")) {
+        const atIndex = fragment.indexOf("@");
+        const filterText = fragment.slice(atIndex + 1);
+        setPopoverMode("conversations");
+        setConversationFilter(filterText);
+        setSelectedIndex(0);
+        if (!isPopoverOpen) {
+          setIsPopoverOpen(true);
+        }
+        return;
+      }
+
       // If fragment contains a space, the user has moved past the command portion
-      if (fragment.includes(" ") || fragment.includes("@")) {
+      if (fragment.includes(" ")) {
         if (isPopoverOpen) {
           dismissPopover();
         }
