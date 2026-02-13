@@ -88,10 +88,16 @@ export function useChat() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const abortControllerRef = useRef<AbortController | null>(null);
+  const skipNextFetchRef = useRef(false);
 
   useEffect(() => {
     if (!activeConversationId) {
       setMessages([]);
+      return;
+    }
+
+    if (skipNextFetchRef.current) {
+      skipNextFetchRef.current = false;
       return;
     }
 
@@ -146,6 +152,7 @@ export function useChat() {
         const conversationId = res.headers.get("X-Conversation-Id");
 
         if (!activeConversationId && conversationId) {
+          skipNextFetchRef.current = true;
           setActiveConversationId(conversationId);
           const title = content.length > 50 ? `${content.substring(0, 50)}...` : content;
           addItem({ id: conversationId, title, updatedAt: new Date().toISOString() });
