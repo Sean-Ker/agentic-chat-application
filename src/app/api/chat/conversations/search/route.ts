@@ -20,9 +20,10 @@ export async function GET(request: NextRequest) {
     })
     .from(chatConversations);
 
-  const results = q.length > 0
-    ? await query.where(sql`lower(${chatConversations.title}) like lower(${`%${q}%`})`).limit(10)
-    : await query.limit(20);
+  const results =
+    q.length > 0
+      ? await query.where(sql`lower(${chatConversations.title}) like lower(${`%${q}%`})`).limit(10)
+      : await query.limit(20);
 
   const conversations = results.map((r) => ({
     id: r.id,

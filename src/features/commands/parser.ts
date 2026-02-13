@@ -54,6 +54,15 @@ export function hasCommands(text: string): boolean {
 }
 
 /**
+ * Strip all ;commands from text, leaving only the non-command portions.
+ * Useful for generating titles from messages that contain commands.
+ */
+export function stripCommands(text: string): string {
+  const regex = new RegExp(COMMAND_REGEX.source, COMMAND_REGEX.flags);
+  return text.replace(regex, "").replace(/\s+/g, " ").trim();
+}
+
+/**
  * Replace resolved commands back into the original text.
  * Replaces from end to start to maintain correct indices.
  * The key of the resolutions map is the `raw` string of the command.

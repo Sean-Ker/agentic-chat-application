@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { hasCommands, parseCommands, replaceCommands } from "@/features/commands/parser";
+import {
+  hasCommands,
+  parseCommands,
+  replaceCommands,
+  stripCommands,
+} from "@/features/commands/parser";
 
 import { useLocalStorage } from "./use-local-storage";
 
@@ -234,7 +239,9 @@ export function useChat() {
         if (!activeConversationId && conversationId) {
           skipNextFetchRef.current = true;
           setActiveConversationId(conversationId);
-          const title = content.length > 50 ? `${content.substring(0, 50)}...` : content;
+          const titleSource = stripCommands(content) || content.trim();
+          const title =
+            titleSource.length > 50 ? `${titleSource.substring(0, 50)}...` : titleSource;
           addItem({ id: conversationId, title, updatedAt: new Date().toISOString() });
           setMessages((prev) =>
             prev.map((m) => (m.id === tempUserMessage.id ? { ...m, conversationId } : m)),

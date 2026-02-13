@@ -1,4 +1,5 @@
 import { getLogger } from "@/core/logging";
+import { stripCommands } from "@/features/commands/parser";
 
 import { ConversationNotFoundError } from "./errors";
 import type { Conversation, Message } from "./models";
@@ -79,9 +80,10 @@ export async function addMessage(
 }
 
 export function generateTitleFromMessage(content: string): string {
-  const trimmed = content.trim();
-  if (trimmed.length <= 50) {
-    return trimmed;
+  const stripped = stripCommands(content);
+  const titleSource = stripped.length > 0 ? stripped : content.trim();
+  if (titleSource.length <= 50) {
+    return titleSource;
   }
-  return `${trimmed.substring(0, 50)}...`;
+  return `${titleSource.substring(0, 50)}...`;
 }
